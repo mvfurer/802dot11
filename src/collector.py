@@ -8,14 +8,17 @@ from collectorClass import Collector
 
 programName = "collector"
 
+
 def main():
     print("starting " + programName + " main ...")
-    collector = Collector("/home/newheres/datacom/802dot11/agent/config/config.json")
+    collector = Collector("/home/newheres/datacom/802dot11/src/collectorConfig.json")
     collector.initialize()
-    conf.iface = collector.get_interface()
-    for i in range(0, collector.get_size()):
-        sniff(count=1, prn=packet_handler)
-    print(collector.get_config_file())
+    while collector.get_number_of_files() < 5:
+        collector.start()
+        collector.write_pcap_in_file()
+        print("writing file: " + collector.get_output_file())
+        collector.update_output_file()
+        print("updated file to: " + collector.get_output_file())
 
 
 main()
