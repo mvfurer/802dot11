@@ -1,0 +1,8 @@
+{
+  "interface": "mon0",
+  "outputDir" : "/home/newheres/datacom/out/",
+  "outputFileMask" : "file802dot11_",
+  "outputExt" : "pcap",
+  "size" : 300,
+  "seqDig" : 5
+}
