@@ -19,10 +19,11 @@ class Collector:
         self.__size = 1
         self.__seqNumber = 0
         self.__maxSeqNumber = 0
+        self.__number_of_files = 0
         self.pkt = []
         super(Collector, self).__init__()
 
-    def get_pkt(self):
+    def start(self):
         sniff(count=self.get_size(), iface=self.get_interface(), prn=self.packet_handler)
 
     def initialize(self):
@@ -99,6 +100,9 @@ class Collector:
     def get_max_sequence_number(self):
         return self.__maxSeqNumber
 
+    def get_number_of_files(self):
+        return self.__number_of_files
+
     def get_next_sequence_number(self):
         if (self.__seqNumber < self.__maxSeqNumber) & (self.__seqNumber >= 0):
             return self.__seqNumber + 1
@@ -106,7 +110,7 @@ class Collector:
             if self.__seqNumber == self.__maxSeqNumber:
                 return 0
 
-    def update_sequence_number(self, num):
+    def set_sequence_number(self, num):
         if num <= self.__maxSeqNumber | self.__seqNumber >= 0:
             self.__seqNumber = num
         else:
@@ -116,6 +120,7 @@ class Collector:
         now = datetime.datetime.now()
         self.__outputFile = self.get_output_dir() + self.get_output_file_mask() + \
                             now.strftime("%Y%m%d_%H%M%S") + "_" + format(self.get_sequence_number(), "05d")
+        self.set_sequence_number(self.get_next_sequence_number())
 
     def packet_handler(self, pkt):
         # me quedo solo con los paquetes con layer 802.11
@@ -124,4 +129,6 @@ class Collector:
 
     def write_pcap_in_file(self):
         wrpcap(self.__outputFile, self.pkt)
+        self.__number_of_files = self.__number_of_files + 1
+        self.pkt = []
 
