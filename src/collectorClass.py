@@ -119,7 +119,9 @@ class Collector:
     def update_output_file(self):
         now = datetime.datetime.now()
         self.__outputFile = self.get_output_dir() + self.get_output_file_mask() + \
-                            now.strftime("%Y%m%d_%H%M%S") + "_" + format(self.get_sequence_number(), "05d")
+                            now.strftime("%Y%m%d_%H%M%S") + "_" + format(self.get_sequence_number(), "05d") + \
+                            "." + self.get_output_file_ext()
+
         self.set_sequence_number(self.get_next_sequence_number())
 
     def packet_handler(self, pkt):
