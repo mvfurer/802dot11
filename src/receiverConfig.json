@@ -1,0 +1,9 @@
+{
+  "host": "localhost",
+  "src_port": 7000,
+  "outputDir" : "/home/newheres/datacom/out_recv/",
+  "outputFileMask" : "recv802dot11_",
+  "outputExt" : "pcap",
+  "size" : 1000,
+  "seqDig" : 5
+}
