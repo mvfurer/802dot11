@@ -13,6 +13,7 @@ import argparse
 import json
 import glob
 import datetime
+import pickle
 
 
 class Receiver(Sender):
@@ -23,6 +24,7 @@ class Receiver(Sender):
         self.__number_of_files_r = 0
         self.backlog = 1
         self.data_payload = 2048
+        self.outputFile = ''
         super().__init__(self.__conf)
 
     def initialize(self):
@@ -92,18 +94,36 @@ class Receiver(Sender):
         # Listen to clients, backlog argument specifies the max no. of queued connections
         self.sock.listen(self.backlog)
         self.client, self.address = self.sock.accept()
+        print("Waiting to receive message from client")
         while True:
-            print("Waiting to receive message from client")
-            self.data = self.client.recv(self.data_payload)
-            if self.data:
-                print("Data received  ... " + str(self.data))
+            container = self.client.recv(self.data_payload)
+            # print(container)
+            datarcv = pickle.loads(container)
+            print(datarcv)
+            if datarcv['type'] == 0:
+                self.data = datarcv['payload'];
+                self.pkt.append(self.data)
+                # print("Data received  ... " + str(self.data))
                 self.client.send("OK".encode())
-                print("sent OK bytes back " + str(self.address))
+                # print("sent OK bytes back " + str(self.address))
+            elif datarcv['type'] == 1:
+                print("recieved all registries")
+                self.outputFile = self.__outputDir + datarcv['name']
+                print("write outputfile: " + self.outputFile)
+                print("saved file")
+                self.write_pcap_in_file()
+            else:
+                print("recieved all registries")
+                # cierra la conexion, reicibio el fin de envio
+                print("Cerrando conexion  ... ")
+                self.client.close()
+                #self.client, self.address = self.sock.accept()
+
 
     def write_pcap_in_file(self):
 
         wrpcap(self.outputFile, self.pkt)
-        self.__number_of_files_w = self.__number_of_files + 1
+        self.__number_of_files_w = self.__number_of_files_w + 1
         self.pkt = []
 
     def send_reg(self):

@@ -13,6 +13,7 @@ import argparse
 import json
 import glob
 import datetime
+import pickle
 
 
 class Sender(Collector):
@@ -21,6 +22,7 @@ class Sender(Collector):
         self.__conf = conf_file
         self.__number_of_files_w = 0
         self.__number_of_files_r = 0
+        self.send_file_name = ''
         super().__init__(self.__conf)
 
     def initialize(self):
@@ -97,11 +99,29 @@ class Sender(Collector):
 
     def send_reg(self):
 
-        files = (glob.glob(self.inputDir + self.__inputFileMask + "*." + self.__outputExt)).pop()
-        file=rdpcap(files)
-        print(files)
-        for msg in file:
-            print("sending: " + str(len(msg)) + " bytes")
-            self.socket.send(raw(msg))
-            data = self.socket.recv(2048)
-            print("received: ", data.decode())
+        for self.send_file_name in (glob.glob(self.inputDir + self.__inputFileMask + "*." + self.__outputExt)):
+            # Muestro archivo de entrada completo
+            print(self.send_file_name)
+            # extraigo el directorio y me quedo solo con el nombre de archivo
+            file_name = os.path.basename(self.send_file_name)
+            file=rdpcap(self.send_file_name)
+            # creo el container
+            container={'type': 0, 'name': file_name, 'payload': b'0'}
+            for msg in file:
+                # print(msg)
+                container['payload'] = msg
+                # print("sending: " + str(len(msg)) + " bytes")
+                self.socket.sendall(pickle.dumps(container))
+                data = self.socket.recv(2048)
+                # print("received: ", data.decode())
+            print("sent all registers")
+            container['type'] = 1
+            container['payload'] = 0
+            self.socket.sendall(pickle.dumps(container))
+        print("no more files to send")
+        container['type'] = 2
+        container['payload'] = 0
+        container['name'] = ''
+        self.socket.sendall(pickle.dumps(container))
+        print("Closing connection to the server ...")
+        self.socket.close()
