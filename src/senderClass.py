@@ -100,27 +100,29 @@ class Sender(Collector):
     def send_reg(self):
 
         for self.send_file_name in (glob.glob(self.inputDir + self.__inputFileMask + "*." + self.__outputExt)):
+            i = 0
             # Muestro archivo de entrada completo
             print(self.send_file_name)
             # extraigo el directorio y me quedo solo con el nombre de archivo
             file_name = os.path.basename(self.send_file_name)
-            file=rdpcap(self.send_file_name)
+            # file=rdpcap(self.send_file_name)
             # creo el container
             container={'type': 0, 'name': file_name, 'payload': b'0'}
-            for msg in file:
-                # print(msg)
-                container['payload'] = msg
-                # print("sending: " + str(len(msg)) + " bytes")
-                self.socket.sendall(pickle.dumps(container))
-                data = self.socket.recv(2048)
-                # print("received: ", data.decode())
-            print("sent all registers")
+            with open(self.send_file_name, 'rb') as f:
+                data_send = f.read(8 * 1024)
+                while data_send:
+                    container['payload'] = data_send
+                    self.socket.sendall(pickle.dumps(container))
+                    data = self.socket.recv(8 * 1024)
+                    i = i + 1
+                    data_send = f.read(8 * 1024)
+            print("sent all registers: " + str(i))
             container['type'] = 1
-            container['payload'] = 0
+            container['payload'] = b'0'
             self.socket.sendall(pickle.dumps(container))
         print("no more files to send")
         container['type'] = 2
-        container['payload'] = 0
+        container['payload'] = b'0'
         container['name'] = ''
         self.socket.sendall(pickle.dumps(container))
         print("Closing connection to the server ...")

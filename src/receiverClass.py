@@ -23,7 +23,7 @@ class Receiver(Sender):
         self.__number_of_files_w = 0
         self.__number_of_files_r = 0
         self.backlog = 1
-        self.data_payload = 2048
+        self.data_payload = 9 * 1024
         self.outputFile = ''
         super().__init__(self.__conf)
 
@@ -95,36 +95,48 @@ class Receiver(Sender):
         self.sock.listen(self.backlog)
         self.client, self.address = self.sock.accept()
         print("Waiting to receive message from client")
+        i = 0
+        self.data = []
         while True:
             container = self.client.recv(self.data_payload)
-            # print(container)
+            print(container)
             datarcv = pickle.loads(container)
-            print(datarcv)
+            #print(datarcv)
             if datarcv['type'] == 0:
-                self.data = datarcv['payload'];
+                self.data = datarcv['payload']
+                print(self.data)
+                print(pickle.dumps(self.data))
                 self.pkt.append(self.data)
+                print("appended: ")
+                print(self.pkt)
+                i = i + 1
                 # print("Data received  ... " + str(self.data))
                 self.client.send("OK".encode())
                 # print("sent OK bytes back " + str(self.address))
             elif datarcv['type'] == 1:
-                print("recieved all registries")
+                print("recieved all registries: " + str(i))
                 self.outputFile = self.__outputDir + datarcv['name']
                 print("write outputfile: " + self.outputFile)
                 print("saved file")
                 self.write_pcap_in_file()
+                self.pkt = []
+                i = 0
             else:
+                self.pkt = []
                 print("recieved all registries")
                 # cierra la conexion, reicibio el fin de envio
                 print("Cerrando conexion  ... ")
                 self.client.close()
+                break
                 #self.client, self.address = self.sock.accept()
 
 
     def write_pcap_in_file(self):
 
-        wrpcap(self.outputFile, self.pkt)
+        with open(self.outputFile, "a+b") as f:
+            for element in self.pkt:
+                f.write(bytes(element))
         self.__number_of_files_w = self.__number_of_files_w + 1
-        self.pkt = []
 
     def send_reg(self):
 
