@@ -6,7 +6,7 @@ import sys
 import signal
 from wifiCollectorClass import wifiCollector
 
-programName = "collector"
+programName = "wifiCollector"
 global shutdown_flag
 shutdown_flag = 0
 
