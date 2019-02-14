@@ -4,8 +4,7 @@ from scapy.all import *
 import os
 import sys
 import signal
-
-from collectorClass import Collector
+from wifiCollectorClass import wifiCollector
 
 programName = "collector"
 global shutdown_flag
@@ -19,14 +18,17 @@ def terminate_process(signal_number, frame):
 
 
 def main():
+    if (sys.argv[1] != '-c') | (len(sys.argv) <= 2):
+        print("use: " + programName + " -c [CONFIG_FILE]")
     signal.signal(signal.SIGINT, terminate_process)
     print("starting " + programName + " with PID: " + str(os.getpid()))
-    collector = Collector("/home/newheres/datacom/802dot11/src/collectorConfig.json")
+    cfg_file = sys.argv[2]
+    collector = wifiCollector(cfg_file)
     collector.initialize()
     while not shutdown_flag:
         collector.start()
         collector.write_pcap_in_file()
-        print("writing file: " + collector.get_output_file())
+        print("writing file: " + collector.conf['cfgFromProc']['outputFile'])
         collector.update_output_file()
 
 
