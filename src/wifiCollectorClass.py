@@ -32,6 +32,7 @@ class wifiCollector(dataUtils):
         self.__writePackets = 0
         self.__number_of_files = 0
         self.pkt = []
+        self.class_name = "wifiCollectorClass"
 
     def start(self):
         sniff(count=self.conf['cfgFromFile']['size'], iface=self.conf['cfgFromFile']['interface'], \
@@ -46,8 +47,9 @@ class wifiCollector(dataUtils):
             for key in self.conf['cfgFromFile'].keys():
                 try:
                     self.conf['cfgFromFile'][key] = self.get_value_from_json(json_data, key)
-                except KeyError:
-                    print("[collectorClass] ")
+                except KeyError as e1:
+                    print('[' + self.class_name + ']' + ' Exception: ', e1)
+                    raise KeyError("Error reading necessary keys to execute the process")
             number_of_digits = self.conf['cfgFromFile']['seqDig']
             self.conf['cfgFromProc']['maxSeqNumber'] = 10 ** int(number_of_digits) - 1
             self.conf['cfgFromProc']['seqNumber'] = 0

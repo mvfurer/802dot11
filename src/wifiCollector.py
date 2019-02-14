@@ -24,7 +24,11 @@ def main():
     print("starting " + programName + " with PID: " + str(os.getpid()))
     cfg_file = sys.argv[2]
     collector = wifiCollector(cfg_file)
-    collector.initialize()
+    try:
+        collector.initialize()
+    except KeyError:
+        print('[' + programName + ']' + ' Exception: process exit')
+        exit()
     while not shutdown_flag:
         collector.start()
         collector.write_pcap_in_file()
