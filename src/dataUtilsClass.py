@@ -34,9 +34,45 @@ class dataUtils:
             data = {}
         return data
 
-    def get_value_from_json(self, json_data, field):
-        if field not in json_data:
-            raise KeyError('no se encontro key: ', field)
+    def get_value_from_json(self, json_data, key):
+        if key not in json_data:
+            raise KeyError('no se encontro key: ', key)
         else:
-            return json_data[field]
+            return json_data[key]
 
+    def write_pcap_in_file(self):
+        if 0 == 0:
+        # if not os.path.isfile(self.conf['cfgFromProc']['outputFile']):
+            with open(self.conf['cfgFromProc']['outputFile'], "a+b") as f:
+                for element in self.pkt:
+                    f.write(bytes(element))
+            self.conf['cfgFromProc']['number_of_files_w'] = self.conf['cfgFromProc']['number_of_files_w'] + 1
+        else:
+            print('[' + self.class_name + '] ' + self.conf['cfgFromProc']['outputFile'] + ' already exist. skipping')
+        self.set_sequence_number(self.get_next_sequence_number())
+
+    def write_dot11_in_pcap(self):
+        wrpcap(self.conf['cfgFromProc']['outputFile'], self.pkt)
+        self.set_sequence_number(self.get_next_sequence_number())
+
+    def update_output_file(self):
+        now = datetime.datetime.now()
+        self.conf['cfgFromProc']['outputFile'] = self.conf['cfgFromFile']['outputDir'] + \
+                                                 self.conf['cfgFromFile']['outputFileMask'] + \
+                                                 now.strftime("%Y%m%d_%H%M%S") + "_" + \
+                                                 format(self.conf['cfgFromProc']['seqNumber'], "05d") + \
+                                                 "." + self.conf['cfgFromFile']['outputExt']
+
+    def get_next_sequence_number(self):
+        if (self.conf['cfgFromProc']['seqNumber'] < self.conf['cfgFromProc']['maxSeqNumber']) & \
+           (self.conf['cfgFromProc']['seqNumber'] >= 0):
+            return self.conf['cfgFromProc']['seqNumber'] + 1
+        else:
+            if self.conf['cfgFromProc']['seqNumber'] == self.conf['cfgFromProc']['maxSeqNumber']:
+                return 0
+
+    def set_sequence_number(self, num):
+        if num <= self.conf['cfgFromProc']['maxSeqNumber'] | self.conf['cfgFromProc']['seqNumber'] >= 0:
+            self.conf['cfgFromProc']['seqNumber'] = num
+        else:
+            print("ERROR. numero de secuencia invalido")

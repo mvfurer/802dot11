@@ -1,6 +1,13 @@
 #!/usr/bin/python
+# Este programa esta creado para ser ejecutado con python 3.6
+# debe ejecutarse con usuario root
+# debe configurarse la placa de wifi en modo monitor:
+# ej:
+# iw phy phy1 interface add mon0 type monitor
+# ifconfig mon0 up
+# iw dev mon0 set freq 2412   (opcional)
+# captura los paquetes beacon de 802.11
 
-from scapy.all import *
 import os
 import sys
 import signal
@@ -30,10 +37,12 @@ def main():
         print('[' + programName + ']' + ' Exception: process exit')
         exit()
     while not shutdown_flag:
-        collector.start()
-        collector.write_pcap_in_file()
-        print("writing file: " + collector.conf['cfgFromProc']['outputFile'])
-        collector.update_output_file()
+        try:
+            collector.start()
+            collector.update_output_file()
+        except Exception as e1:
+            print('[' + programName + ']' + ' Exception: process exit', e1)
+            exit()
 
 
 main()

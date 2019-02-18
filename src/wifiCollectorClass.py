@@ -1,10 +1,10 @@
 #!/usr/bin/python
+# Este programa esta creado para ser ejecutado con python 3.6
 
 from scapy.all import *
 import json
 import datetime
 from dataUtilsClass import dataUtils
-
 
 class wifiCollector(dataUtils):
 
@@ -25,18 +25,22 @@ class wifiCollector(dataUtils):
                     'writePackets': 0,
                     'seqNumber': 0,
                     'maxSeqNumber': 0,
-                    'number_of_files': 0
+                    'number_of_files_w': 0
                     }
                 }
-        self.__readPackets = 0
-        self.__writePackets = 0
-        self.__number_of_files = 0
         self.pkt = []
         self.class_name = "wifiCollectorClass"
 
     def start(self):
-        sniff(count=self.conf['cfgFromFile']['size'], iface=self.conf['cfgFromFile']['interface'], \
-                prn=self.packet_handler)
+        try:
+            sniff(count=self.conf['cfgFromFile']['size'], iface=self.conf['cfgFromFile']['interface'],
+                  prn=self.packet_handler)
+        except (PermissionError, OSError) as e1:
+            print('[' + self.class_name + ']' + ' Exception: ', e1)
+            raise Exception("Error when try to pull data wifi")
+        print("writing file: " + self.conf['cfgFromProc']['outputFile'])
+        self.write_dot11_in_pcap()
+        self.pkt = []
 
     def initialize(self):
         with open(self.conf['cfgFromProc']['configFile']) as json_file:
@@ -55,37 +59,11 @@ class wifiCollector(dataUtils):
             self.conf['cfgFromProc']['seqNumber'] = 0
             self.update_output_file()
 
-    def get_next_sequence_number(self):
-        if (self.conf['cfgFromProc']['seqNumber'] < self.conf['cfgFromProc']['maxSeqNumber']) & \
-           (self.conf['cfgFromProc']['seqNumber'] >= 0):
-            return self.conf['cfgFromProc']['seqNumber'] + 1
-        else:
-            if self.conf['cfgFromProc']['seqNumber'] == self.conf['cfgFromProc']['maxSeqNumber']:
-                return 0
-
-    def set_sequence_number(self, num):
-        if num <= self.conf['cfgFromProc']['maxSeqNumber'] | self.conf['cfgFromProc']['seqNumber'] >= 0:
-            self.conf['cfgFromProc']['seqNumber'] = num
-        else:
-            print("ERROR. numero de secuencia invalido")
-
-    def update_output_file(self):
-        now = datetime.datetime.now()
-        self.conf['cfgFromProc']['outputFile'] = self.conf['cfgFromFile']['outputDir'] + \
-                                                 self.conf['cfgFromFile']['outputFileMask'] + \
-                                                 now.strftime("%Y%m%d_%H%M%S") + "_" + \
-                                                 format(self.conf['cfgFromProc']['seqNumber'], "05d") + \
-                                                 "." + self.conf['cfgFromFile']['outputExt']
-
-        self.set_sequence_number(self.get_next_sequence_number())
-
     def packet_handler(self, pkt):
         # me quedo solo con los paquetes con layer 802.11
-        if pkt.haslayer(Dot11):
+        # no funciona Dot11
+        # https://github.com/secdev/scapy/issues/1590
+        # utilizo beacon porque son los que me interesan para ver las redes
+        if pkt.haslayer(Dot11Beacon):
             self.pkt.append(pkt)
-
-    def write_pcap_in_file(self):
-        wrpcap(self.conf['cfgFromProc']['outputFile'], self.pkt)
-        self.__number_of_files = self.__number_of_files + 1
-        self.pkt = []
 
