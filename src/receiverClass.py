@@ -5,7 +5,6 @@ clase sender que envia los paquetes guardados en pcap file
 basado en el programa
 
 """
-from senderClass import Sender
 from scapy.all import *
 import socket
 import sys
@@ -14,129 +13,106 @@ import json
 import glob
 import datetime
 import pickle
+import os
+from dataUtilsClass import dataUtils
 
 
-class Receiver(Sender):
+class Receiver(dataUtils):
 
     def __init__(self, conf_file):
-        self.__conf = conf_file
-        self.__number_of_files_w = 0
-        self.__number_of_files_r = 0
-        self.backlog = 1
+        self.conf = {
+            'cfgFromFile': {
+                'host': '',
+                'src_port': 5000,
+                'outputDir': '',
+                'outputFileMask': '',
+                'outputExt': '',
+                'size': 0,
+                "seqDig": 0
+            },
+            'cfgFromProc': {
+                'configFile': conf_file,
+                'outputFile': '',
+                'readPackets': 0,
+                'writePackets': 0,
+                'seqNumber': 0,
+                'maxSeqNumber': 0,
+                'number_of_files_w': 0,
+                'number_of_files_r': 0,
+                'backlog': 1
+            }
+        }
         self.data_payload = 9 * 1024
-        self.outputFile = ''
-        super().__init__(self.__conf)
+        self.class_name = "receiverClass"
+        self.pkt = []
 
     def initialize(self):
-        config_file = self.get_config_file()
-        with open(config_file) as json_file:
+
+        with open(self.conf['cfgFromProc']['configFile']) as json_file:
             text = json_file.read()
             json_data = json.loads(text)
-            """
-            necesito setear todos estos parametros para que se ejecute
-            el proceso.
-            """
-            self.__number_of_files_w = 0
-            self.__number_of_files_r = 0
-            self.pkt = []
-
-            if 'host' not in json_data:
-                raise KeyError("no se encontro key: host")
-            else:
-                self.host = json_data['host']
-
-            if 'src_port' not in json_data:
-                raise KeyError("no se encontro key: src_port")
-            else:
-                self.port = json_data['src_port']
-
-            if 'outputDir' not in json_data:
-                raise KeyError("no se encontro key: outputDir")
-            else:
-                self.__outputDir = json_data['outputDir']
-
-            if 'outputFileMask' not in json_data:
-                raise KeyError("no se encontro key: outputFileMask")
-            else:
-                self.__outputFileMask = json_data['outputFileMask']
-
-            if 'outputExt' not in json_data:
-                raise KeyError("no se encontro key: outputExt")
-            else:
-                self.__outputExt = json_data['outputExt']
-
-            if 'size' not in json_data:
-                raise KeyError("no se encontro key: size")
-            else:
-                self.__size = json_data['size']
-
-            if 'seqDig' not in json_data:
-                raise KeyError("no se encontro key: seqDig")
-            else:
-                number_of_digits = json_data['seqDig']
-                self.__seqNumber = 0
-                self.__maxSeqNumber = 10 ** int(number_of_digits) - 1
+            # necesito setear todos estos parametros para que se ejecute
+            # el proceso. Los datos son obtenidos del archivo de configuracion
+            for key in self.conf['cfgFromFile'].keys():
+                try:
+                    self.conf['cfgFromFile'][key] = self.get_value_from_json(json_data, key)
+                except KeyError as e1:
+                    print('[' + self.class_name + ']' + ' Exception: ', e1)
+                    raise KeyError("Error reading necessary keys to execute the process")
+            number_of_digits = self.conf['cfgFromFile']['seqDig']
+            self.conf['cfgFromProc']['maxSeqNumber'] = 10 ** int(number_of_digits) - 1
+            self.conf['cfgFromProc']['seqNumber'] = 0
             self.update_output_file()
+            """ A simple echo server """
+            print("[start] esperando por nuevas conexiones")
+            # Create a TCP socket
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # Enable reuse address/port
+            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            # Bind the socket to the port
+            self.server_address = (self.conf['cfgFromFile']['host'], self.conf['cfgFromFile']['src_port'])
+            # print
+            # "Starting up echo server on %s port %s" % server_address
+            self.sock.bind(self.server_address)
+            # Listen to clients, backlog argument specifies the max no. of queued connections
+            self.sock.listen(self.conf['cfgFromProc']['backlog'])
+            print("Waiting to receive message from client")
+            self.client, self.address = self.sock.accept()
 
 
+    def start(self):
 
-    def run(self):
-        """ A simple echo server """
-        # Create a TCP socket
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # Enable reuse address/port
-        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        # Bind the socket to the port
-        self.server_address = (self.host, self.port)
-        # print
-        # "Starting up echo server on %s port %s" % server_address
-        self.sock.bind(self.server_address)
-        # Listen to clients, backlog argument specifies the max no. of queued connections
-        self.sock.listen(self.backlog)
-        self.client, self.address = self.sock.accept()
-        print("Waiting to receive message from client")
         i = 0
         self.data = []
         while True:
             container = self.client.recv(self.data_payload)
-            print(container)
             datarcv = pickle.loads(container)
-            #print(datarcv)
             if datarcv['type'] == 0:
                 self.data = datarcv['payload']
-                print(self.data)
-                print(pickle.dumps(self.data))
                 self.pkt.append(self.data)
-                print("appended: ")
-                print(self.pkt)
                 i = i + 1
-                # print("Data received  ... " + str(self.data))
-                self.client.send("OK".encode())
-                # print("sent OK bytes back " + str(self.address))
+                self.client.send('OK'.encode())
             elif datarcv['type'] == 1:
                 print("recieved all registries: " + str(i))
-                self.outputFile = self.__outputDir + datarcv['name']
-                print("write outputfile: " + self.outputFile)
-                print("saved file")
+                file_name = os.path.basename(datarcv['name'])
+                self.conf['cfgFromProc']['outputFile'] = self.conf['cfgFromFile']['outputDir'] + \
+                                                         self.conf['cfgFromFile']['outputFileMask'] + \
+                                                         file_name.split('_', 1)[1]
+                print("write outputfile: " + self.conf['cfgFromProc']['outputFile'])
+                print("File saved")
+                self.client.send('OK_CLOSE'.encode())
                 self.write_pcap_in_file()
                 self.pkt = []
                 i = 0
             else:
                 self.pkt = []
+                self.client.send('OK_CLOSE'.encode())
                 print("recieved all registries")
                 # cierra la conexion, reicibio el fin de envio
-                print("Cerrando conexion  ... ")
-                self.client.close()
+                # print("Cerrando conexion  ... ")
+                # self.client.close()
                 break
                 #self.client, self.address = self.sock.accept()
-
-
-    def write_pcap_in_file(self):
-
-        with open(self.outputFile, "a+b") as f:
-            for element in self.pkt:
-                f.write(bytes(element))
-        self.__number_of_files_w = self.__number_of_files_w + 1
 
     def send_reg(self):
 
@@ -148,3 +124,5 @@ class Receiver(Sender):
             self.socket.send(raw(msg))
             data = self.socket.recv(2048)
             print("received: ", data.decode())
+
+

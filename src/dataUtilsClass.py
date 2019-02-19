@@ -41,8 +41,7 @@ class dataUtils:
             return json_data[key]
 
     def write_pcap_in_file(self):
-        if 0 == 0:
-        # if not os.path.isfile(self.conf['cfgFromProc']['outputFile']):
+        if not os.path.isfile(self.conf['cfgFromProc']['outputFile']):
             with open(self.conf['cfgFromProc']['outputFile'], "a+b") as f:
                 for element in self.pkt:
                     f.write(bytes(element))
