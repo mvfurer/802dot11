@@ -19,13 +19,13 @@ class dataUtils:
             dBm = pkt[0].dBm_AntSignal
             data = {
                     "measurement": "signal_level",
+                    "time": tstamp,
                     "tags": {
                         "network": net_name,
                         "dBm": dBm
                     },
-                    "time": tstamp,
                     "fields": {
-                        "rb_id": 0
+                        "devId": 0
                     }
                 }
 

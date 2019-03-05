@@ -3,6 +3,6 @@
   "outputDir" : "/home/newheres/datacom/out/",
   "outputFileMask" : "file802dot11_",
   "outputExt" : "pcap",
-  "size" : 1000,
+  "size" : 100,
   "seqDig" : 5
 }

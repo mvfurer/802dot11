@@ -22,8 +22,10 @@ class Sender(dataUtils):
     def __init__(self, conf_file):
         self.conf = {
             'cfgFromFile': {
+                'type': '',
                 'host': '',
                 'port': 5000,
+                'dbName': '',
                 'inputDir': '',
                 'inputFileMask': '',
                 'outputDir': '',
@@ -66,9 +68,12 @@ class Sender(dataUtils):
             self.conf['cfgFromProc']['maxSeqNumber'] = 10 ** int(number_of_digits) - 1
             self.conf['cfgFromProc']['seqNumber'] = 0
             self.update_output_file()
-            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.server_address = (self.conf['cfgFromFile']['host'], self.conf['cfgFromFile']['port'])
-            self.socket.connect(self.server_address)
+            if self.conf['cfgFromFile']['type'] == 'tcp':
+                self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.server_address = (self.conf['cfgFromFile']['host'], self.conf['cfgFromFile']['port'])
+                self.socket.connect(self.server_address)
+            if self.conf['cfgFromFile']['type'] == 'db':
+                self.client = InfluxDBClient(self.conf['cfgFromFile']['host'], 8086, 'root', 'root', self.conf['cfgFromFile']['dbName'])
 
     def send_tcp(self):
         print("send_tcp buscando archivos")
@@ -102,7 +107,6 @@ class Sender(dataUtils):
             container['payload'] = b'0'
             self.socket.sendall(pickle.dumps(container))
             data = self.socket.recv(self.BUFFER_SIZE)
-            #self.socket.close()
         print("no more files to send")
         print("send 2 to server")
         container['type'] = 2
@@ -110,20 +114,23 @@ class Sender(dataUtils):
         container['name'] = ''
         self.socket.sendall(pickle.dumps(container))
         data = self.socket.recv(self.BUFFER_SIZE)
-        # print("Closing connection to the server ...")
-
 
     def send_db(self):
-        client = InfluxDBClient('localhost', 8086, 'root', 'root', 'example2')
-        client.create_database('example2')
-
-        f = dataUtils.open_pcap_file("/home/newheres/datacom/out/file802dot11_20190111_221608_00000.pcap")
+        f = self.open_pcap_file("/home/newheres/datacom/out/file802dot11_20190111_221608_00000.pcap")
         for reg in f:
-            data = dataUtils.get_json_from_radioTap(reg)
+            data = self.get_json_from_radioTap(reg)
             if len(data) > 2:
                 print("[Sender] ", data)
                 json_body = [data]
                 print(type(json_body))
-                client.write_points(json_body)
+                self.client.write_points(json_body)
         self.set_sequence_number(self.get_next_sequence_number())
 
+    def send(self, method):
+        if method == 'db':
+            self.send_db()
+
+        if method == 'tcp':
+            self.send_tcp()
+        else:
+            print("unknow send option: ", method)

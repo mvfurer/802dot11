@@ -1,11 +1,12 @@
 {
-  "type": "socket",
+  "type": "db",
   "host": "localhost",
-  "port": 7000,
-  "inputDir" : "/home/newheres/datacom/out/",
+  "port": 8086,
+  "dbName": "eventsdb",
+  "inputDir" : "/home/newheres/datacom/out_send/",
   "inputFileMask" : "file802dot11_",
-  "outputDir" : "/home/newheres/datacom/out_send/",
-  "outputFileMask" : "send802dot11_",
+  "outputDir" : "/home/newheres/datacom/out_db/",
+  "outputFileMask" : "db802dot11_",
   "outputExt" : "pcap",
   "size" : 1000,
   "seqDig" : 5
