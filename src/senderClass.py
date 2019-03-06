@@ -81,6 +81,7 @@ class Sender(dataUtils):
         file_list = glob.glob(self.conf['cfgFromFile']['inputDir'] +
                                               self.conf['cfgFromFile']['inputFileMask'] +
                                               "*." + self.conf['cfgFromFile']['outputExt'])
+        container = {}
         for file in file_list:
             i = 0
             # Muestro archivo de entrada completo
@@ -107,6 +108,8 @@ class Sender(dataUtils):
             container['payload'] = b'0'
             self.socket.sendall(pickle.dumps(container))
             data = self.socket.recv(self.BUFFER_SIZE)
+            # cambio nombre de archivo para que no lo tome en la proxima pasada
+            os.rename(file, file + '.ok')
         print("no more files to send")
         print("send 2 to server")
         container['type'] = 2
