@@ -2,7 +2,8 @@
 
 """
 clase sender que envia los paquetes guardados en pcap file
-basado en el programa
+basado en el programa echo server del libro
+Python Network Programming Cookbook -- Chapter – 1
 
 """
 from scapy.all import *
