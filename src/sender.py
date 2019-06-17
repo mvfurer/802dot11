@@ -23,7 +23,7 @@ def main():
     if (sys.argv[1] != '-c') | (len(sys.argv) <= 2):
         print("use: " + programName + " -c [CONFIG_FILE]")
     signal.signal(signal.SIGINT, terminate_process)
-    print("starting " + programName + " with PID: " + str(os.getpid()))
+    print("starting " + programName + " -c " + sys.argv[2] + " with PID: " + str(os.getpid()))
     cfg_file = sys.argv[2]
     sender_inst = Sender(cfg_file)
     sender_inst.initialize()
