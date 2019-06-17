@@ -2,6 +2,10 @@ from scapy.all import *
 import json
 import datetime
 import sys
+import pwd
+import grp
+import os
+
 
 
 class dataUtils:
@@ -52,6 +56,9 @@ class dataUtils:
 
     def write_dot11_in_pcap(self):
         wrpcap(self.conf['cfgFromProc']['outputFile'], self.pkt)
+        uid = pwd.getpwnam("pi").pw_uid
+        gid = grp.getgrnam("pi").gr_gid
+        os.chown(self.conf['cfgFromProc']['outputFile'], uid, gid)
         self.set_sequence_number(self.get_next_sequence_number())
 
     def update_output_file(self):
