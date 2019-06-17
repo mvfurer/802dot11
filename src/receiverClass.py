@@ -43,7 +43,7 @@ class Receiver(dataUtils):
                 'backlog': 1
             }
         }
-        self.data_payload = 9 * 1024
+        self.data_payload = 2 * 1024
         self.class_name = "receiverClass"
         self.pkt = []
 
@@ -86,34 +86,37 @@ class Receiver(dataUtils):
         i = 0
         self.data = []
         while True:
-            container = self.client.recv(self.data_payload)
-            datarcv = pickle.loads(container)
-            if datarcv['type'] == 0:
-                self.data = datarcv['payload']
-                self.pkt.append(self.data)
-                i = i + 1
-                self.client.send('OK'.encode())
-            elif datarcv['type'] == 1:
-                print("recieved all registries: " + str(i))
-                file_name = os.path.basename(datarcv['name'])
-                self.conf['cfgFromProc']['outputFile'] = self.conf['cfgFromFile']['outputDir'] + \
-                                                         self.conf['cfgFromFile']['outputFileMask'] + \
-                                                         file_name.split('_', 1)[1]
-                print("write outputfile: " + self.conf['cfgFromProc']['outputFile'])
-                print("File saved")
-                self.client.send('OK_CLOSE'.encode())
-                self.write_pcap_in_file()
-                self.pkt = []
-                i = 0
-            else:
-                self.pkt = []
-                self.client.send('OK_CLOSE'.encode())
-                print("recieved all registries")
-                # cierra la conexion, reicibio el fin de envio
-                # print("Cerrando conexion  ... ")
-                # self.client.close()
-                break
-                #self.client, self.address = self.sock.accept()
+            try:
+                container = self.client.recv(self.data_payload)
+                datarcv = pickle.loads(container)
+                if datarcv['type'] == 0:
+                    self.data = datarcv['payload']
+                    self.pkt.append(self.data)
+                    i = i + 1
+                    self.client.send('OK'.encode())
+                elif datarcv['type'] == 1:
+                    print("recieved all registries: " + str(i))
+                    file_name = os.path.basename(datarcv['name'])
+                    self.conf['cfgFromProc']['outputFile'] = self.conf['cfgFromFile']['outputDir'] + \
+                                                             self.conf['cfgFromFile']['outputFileMask'] + \
+                                                             file_name.split('_', 1)[1]
+                    print("write outputfile: " + self.conf['cfgFromProc']['outputFile'])
+                    print("File saved")
+                    self.client.send('OK_CLOSE'.encode())
+                    self.write_pcap_in_file()
+                    self.pkt = []
+                    i = 0
+                else:
+                    self.pkt = []
+                    self.client.send('OK_CLOSE'.encode())
+                    print("recieved all registries")
+                    # cierra la conexion, reicibio el fin de envio
+                    # print("Cerrando conexion  ... ")
+                    # self.client.close()
+                    break
+                    #self.client, self.address = self.sock.accept()
+            except Exception as e:
+                print('Exception: process ', e)
 
     def send_reg(self):
 
