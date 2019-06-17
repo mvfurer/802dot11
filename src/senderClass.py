@@ -119,15 +119,27 @@ class Sender(dataUtils):
         data = self.socket.recv(self.BUFFER_SIZE)
 
     def send_db(self):
-        f = self.open_pcap_file("/home/newheres/datacom/out/file802dot11_20190111_221608_00000.pcap")
-        for reg in f:
-            data = self.get_json_from_radioTap(reg)
-            if len(data) > 2:
-                print("[Sender] ", data)
-                json_body = [data]
-                print(type(json_body))
-                self.client.write_points(json_body)
-        self.set_sequence_number(self.get_next_sequence_number())
+        print("send_db buscando archivos")
+
+        file_list = glob.glob(self.conf['cfgFromFile']['inputDir'] +
+                                              self.conf['cfgFromFile']['inputFileMask'] +
+                                              "*." + self.conf['cfgFromFile']['outputExt'])
+        
+        for file in file_list:
+            i = 0
+            # Muestro archivo de entrada completo
+            self.conf['cfgFromProc']['send_file_name'] = file
+            print(file)
+            f = self.open_pcap_file(file)
+            for reg in f:
+                data = self.get_json_from_radioTap(reg)
+                if len(data) > 2:
+                    print("[Sender] ", data)
+                    json_body = [data]
+                    print(type(json_body))
+                    self.client.write_points(json_body)
+            os.rename(file, file + '.ok')
+            self.set_sequence_number(self.get_next_sequence_number())
 
     def send_print(self):
         print("send_print")
