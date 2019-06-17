@@ -49,7 +49,7 @@ class Sender(dataUtils):
             }
         }
         self.class_name = "receiverClass"
-        self.BUFFER_SIZE = 8 * 1024
+        self.BUFFER_SIZE = 1 * 1024
         self.pkt = []
 
     def initialize(self):
@@ -129,11 +129,31 @@ class Sender(dataUtils):
                 self.client.write_points(json_body)
         self.set_sequence_number(self.get_next_sequence_number())
 
+    def send_print(self):
+        print("send_print")
+        i = 0
+        file_list = glob.glob(self.conf['cfgFromFile']['inputDir'] +
+                              self.conf['cfgFromFile']['inputFileMask'] +
+                              "*." + self.conf['cfgFromFile']['outputExt'])
+        for file_name in file_list:
+            print(file_name)
+            f = rdpcap(file_name)
+            s = f.sessions()
+            for ind in s:
+                for packet in s[ind]:
+                    i = i + 1
+                    print("lee registro numero: " + str(i))
+                    print(packet.show())
+        exit()
+
     def send(self, method):
         if method == 'db':
             self.send_db()
 
         if method == 'tcp':
             self.send_tcp()
+
+        if method == 'print':
+            self.send_print()
         else:
             print("unknow send option: ", method)
