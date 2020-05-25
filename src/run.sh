@@ -12,6 +12,20 @@ then
     echo "no se encontro interface modo monitor"
     exit 1
 fi
+# run wifi collector first process in the batch chain
+my_proc=`ps aux | grep -E "sudo python wifiCollector.py -c wifiCollectorConfig.json" | grep -v grep`
+my_pid=`echo $my_proc | awk '{print $2}'`
+if [ "$my_pid" == "" ]
+then
+    sudo python wifiCollector.py -c wifiCollectorConfig.json > /dev/null 2>&1 &
+else
+    echo "wifiCollector is already running with pid: $my_pid"
+fi
 
-sudo python wifiCollector.py -c wifiCollectorConfig.json
+# run sender second process in the batch chain
+
+
+
+
+
 
