@@ -6,7 +6,6 @@ import pwd
 import grp
 import os
 
-
 class dataUtils:
 
     def __init__(self):
@@ -55,8 +54,13 @@ class dataUtils:
 
     def write_dot11_in_pcap(self):
         wrpcap(self.conf['cfgFromProc']['outputFile'], self.pkt)
-        uid = pwd.getpwnam("pi").pw_uid
-        gid = grp.getgrnam("pi").gr_gid
+        machine = os.uname()[4]
+        if machine == "x86_64":
+            uid = pwd.getpwnam("newheres").pw_uid
+            gid = grp.getgrnam("newheres").gr_gid
+        else: # just guessing is arm
+            uid = pwd.getpwnam("pi").pw_uid
+            gid = grp.getgrnam("pi").gr_gid
         os.chown(self.conf['cfgFromProc']['outputFile'], uid, gid)
         self.set_sequence_number(self.get_next_sequence_number())
 
