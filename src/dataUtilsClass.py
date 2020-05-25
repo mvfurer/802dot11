@@ -7,7 +7,6 @@ import grp
 import os
 
 
-
 class dataUtils:
 
     def __init__(self):
