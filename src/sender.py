@@ -5,6 +5,7 @@ import os
 import sys
 import signal
 import argparse
+import time
 
 from senderClass import Sender
 
@@ -20,22 +21,29 @@ def terminate_process(signal_number, frame):
 
 
 def main():
+    process_ready = 0
     if (sys.argv[1] != '-c') | (len(sys.argv) <= 2):
         print("use: " + programName + " -c [CONFIG_FILE]")
     signal.signal(signal.SIGINT, terminate_process)
     print("starting " + programName + " -c " + sys.argv[2] + " with PID: " + str(os.getpid()))
     cfg_file = sys.argv[2]
     sender_inst = Sender(cfg_file)
-    sender_inst.initialize()
     while not shutdown_flag:
         try:
+            if process_ready == 0:
+                process_ready = sender_inst.initialize()
+            print("sender type: " + sender_inst.conf['cfgFromFile']['type'])
             sender_inst.send(sender_inst.conf['cfgFromFile']['type'])
             # sender_inst.write_pcap_in_file()
             # sender_inst.update_output_file()
-            print("buscando mas archivos")
+            print("watting 5 seconds for files")
+            time.sleep(5)
         except ConnectionResetError as e1:
             print('[' + programName + ']' + ' Exception: process exit', e1)
             exit()
+        except Exception as e2:
+            print('[' + programName + ']' + ' Exception: waitting 5 seconds ..')
+            time.sleep(5)
 
 
 main()

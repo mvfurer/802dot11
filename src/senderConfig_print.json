@@ -1,5 +1,5 @@
 {
-  "type": "tcp",
+  "type": "print",
   "host": "localhost",
   "port": 7000,
   "dbName": "",
@@ -7,7 +7,6 @@
   "inputFileMask" : "file802dot11_",
   "outputDir" : "/home/newheres/datacom/out_send/",
   "outputFileMask" : "send802dot11_",
-  "tmpOutputExt" : "tmp",
   "outputExt" : "pcap",
   "size" : 1000,
   "seqDig" : 5

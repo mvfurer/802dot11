@@ -28,12 +28,14 @@ class Receiver(dataUtils):
                 'outputDir': '',
                 'outputFileMask': '',
                 'outputExt': '',
+                'tmpOutputExt': '',
                 'size': 0,
                 "seqDig": 0
             },
             'cfgFromProc': {
                 'configFile': conf_file,
                 'outputFile': '',
+                'tmpOutputFile': '',
                 'readPackets': 0,
                 'writePackets': 0,
                 'seqNumber': 0,

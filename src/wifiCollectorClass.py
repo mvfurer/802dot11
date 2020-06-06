@@ -15,12 +15,14 @@ class wifiCollector(dataUtils):
                     'outputDir': '',
                     'outputFileMask': '',
                     'outputExt': '',
+                    'tmpOutputExt': '',
                     'size': 1,
                     "seqDig": 0
                     },
                 'cfgFromProc': {
                     'configFile': conf_file,
                     'outputFile': '',
+                    'finalOutputFile': '',
                     'readPackets': 0,
                     'writePackets': 0,
                     'seqNumber': 0,

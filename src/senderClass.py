@@ -13,6 +13,7 @@ import json
 import glob
 import datetime
 import pickle
+from shutil import copyfile
 from dataUtilsClass import dataUtils
 from influxdb import InfluxDBClient
 
@@ -31,12 +32,14 @@ class Sender(dataUtils):
                 'outputDir': '',
                 'outputFileMask': '',
                 'outputExt': '',
+                'tmpOutputExt': '',
                 'size': 0,
                 "seqDig": 0
             },
             'cfgFromProc': {
                 'configFile': conf_file,
                 'outputFile': '',
+                'tmpOutputFile': '',
                 'readPackets': 0,
                 'writePackets': 0,
                 'seqNumber': 0,
@@ -71,9 +74,19 @@ class Sender(dataUtils):
             if self.conf['cfgFromFile']['type'] == 'tcp':
                 self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.server_address = (self.conf['cfgFromFile']['host'], self.conf['cfgFromFile']['port'])
-                self.socket.connect(self.server_address)
+                try:
+                    self.socket.settimeout(3)
+                    self.socket.connect(self.server_address)
+                except socket.gaierror as e:
+                    print("Address-related error connecting to server: " + str(e))
+                    raise e
+                except socket.error as ex:
+                    print("Address-related error connecting to server: " + str(ex))
+                    raise ex
             if self.conf['cfgFromFile']['type'] == 'db':
+                print("initialize: sender to db")
                 self.client = InfluxDBClient(self.conf['cfgFromFile']['host'], 8086, 'root', 'root', self.conf['cfgFromFile']['dbName'])
+            return 1
 
     def send_tcp(self):
         print("send_tcp buscando archivos")
@@ -108,8 +121,10 @@ class Sender(dataUtils):
             container['payload'] = b'0'
             self.socket.sendall(pickle.dumps(container))
             data = self.socket.recv(self.BUFFER_SIZE)
+            copyfile(file, self.conf['cfgFromFile']['inputDir'] + file_name)
             # cambio nombre de archivo para que no lo tome en la proxima pasada
             os.rename(file, file + '.ok')
+
         print("no more files to send")
         print("send 2 to server")
         container['type'] = 2
@@ -120,7 +135,6 @@ class Sender(dataUtils):
 
     def send_db(self):
         print("send_db buscando archivos")
-
         file_list = glob.glob(self.conf['cfgFromFile']['inputDir'] +
                                               self.conf['cfgFromFile']['inputFileMask'] +
                                               "*." + self.conf['cfgFromFile']['outputExt'])
@@ -147,25 +161,27 @@ class Sender(dataUtils):
         file_list = glob.glob(self.conf['cfgFromFile']['inputDir'] +
                               self.conf['cfgFromFile']['inputFileMask'] +
                               "*." + self.conf['cfgFromFile']['outputExt'])
+        print(file_list)
         for file_name in file_list:
-            print(file_name)
+            print("src: " + file_name)
             f = rdpcap(file_name)
             s = f.sessions()
             for ind in s:
                 for packet in s[ind]:
                     i = i + 1
-                    print("lee registro numero: " + str(i))
-                    print(packet.show())
-        exit()
+                    # print("lee registro numero: " + str(i))
+                    # print(packet.show())
+            print("registers number: " + str(i))
+            file = os.path.basename(file_name)
+            print("dst: " + self.conf['cfgFromFile']['outputDir'] + file)
 
     def send(self, method):
+        print("method: " + method)
         if method == 'db':
             self.send_db()
-
-        if method == 'tcp':
+        elif method == 'tcp':
             self.send_tcp()
-
-        if method == 'print':
+        elif method == 'print':
             self.send_print()
         else:
-            print("unknow send option: ", method)
+            print("unknow send option: " + method)

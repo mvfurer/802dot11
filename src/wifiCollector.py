@@ -21,6 +21,7 @@ shutdown_flag = 0
 def terminate_process(signal_number, frame):
     global shutdown_flag
     shutdown_flag = 1
+    # TODO: rename all tmp files to pcap
     print('(SIGTERM) terminating the process')
 
 

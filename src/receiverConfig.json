@@ -3,6 +3,7 @@
   "src_port": 7000,
   "outputDir" : "/home/newheres/datacom/out_recv/",
   "outputFileMask" : "recv802dot11_",
+  "tmpOutputExt" : "tmp",
   "outputExt" : "pcap",
   "size" : 1000,
   "seqDig" : 5

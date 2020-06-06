@@ -48,6 +48,7 @@ class dataUtils:
                 for element in self.pkt:
                     f.write(bytes(element))
             self.conf['cfgFromProc']['number_of_files_w'] = self.conf['cfgFromProc']['number_of_files_w'] + 1
+
         else:
             print('[' + self.class_name + '] ' + self.conf['cfgFromProc']['outputFile'] + ' already exist. skipping')
         self.set_sequence_number(self.get_next_sequence_number())
@@ -63,10 +64,18 @@ class dataUtils:
             gid = grp.getgrnam("pi").gr_gid
         os.chown(self.conf['cfgFromProc']['outputFile'], uid, gid)
         self.set_sequence_number(self.get_next_sequence_number())
+        os.rename(self.conf['cfgFromProc']['outputFile'], self.conf['cfgFromProc']['finalOutputFile'])
 
     def update_output_file(self):
+        # output file name
         now = datetime.datetime.now()
         self.conf['cfgFromProc']['outputFile'] = self.conf['cfgFromFile']['outputDir'] + \
+                                                 self.conf['cfgFromFile']['outputFileMask'] + \
+                                                 now.strftime("%Y%m%d_%H%M%S") + "_" + \
+                                                 format(self.conf['cfgFromProc']['seqNumber'], "05d") + \
+                                                 "." + self.conf['cfgFromFile']['tmpOutputExt']
+        # final output file name
+        self.conf['cfgFromProc']['finalOutputFile'] = self.conf['cfgFromFile']['outputDir'] + \
                                                  self.conf['cfgFromFile']['outputFileMask'] + \
                                                  now.strftime("%Y%m%d_%H%M%S") + "_" + \
                                                  format(self.conf['cfgFromProc']['seqNumber'], "05d") + \
