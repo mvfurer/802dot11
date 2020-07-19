@@ -3,7 +3,9 @@
 
 from scapy.all import *
 import json
+import signal
 import datetime
+import pdb; pdb.set_trace()
 from dataUtilsClass import dataUtils
 
 class wifiCollector(dataUtils):
@@ -32,6 +34,7 @@ class wifiCollector(dataUtils):
                 }
         self.pkt = []
         self.class_name = "wifiCollectorClass"
+        self.shutdown_flag = False
 
     def start(self):
         try:
@@ -40,11 +43,23 @@ class wifiCollector(dataUtils):
         except (PermissionError, OSError) as e1:
             print('[' + self.class_name + ']' + ' Exception: ', e1)
             raise Exception("Error when try to pull data wifi")
-        print("writing file: " + self.conf['cfgFromProc']['outputFile'])
+        print("writing file: " + self.conf['cfgFromProc']['finalOutputFile'])
         self.write_dot11_in_pcap()
+        self.pkt = []
+        self.update_output_file()
+
+    def scan(self):
+        try:
+            sniff(count=1, iface=self.conf['cfgFromFile']['interface'],
+                  prn=self.packet_handler)
+        except (PermissionError, OSError) as e1:
+            print('[' + self.class_name + ']' + ' Exception: ', e1)
+            raise Exception("Error when try to pull data wifi")
+        print(self.pkt)
         self.pkt = []
 
     def initialize(self):
+        signal.signal(signal.SIGINT, self.terminate_process)
         with open(self.conf['cfgFromProc']['configFile']) as json_file:
             text = json_file.read()
             json_data = json.loads(text)
@@ -60,6 +75,13 @@ class wifiCollector(dataUtils):
             self.conf['cfgFromProc']['maxSeqNumber'] = 10 ** int(number_of_digits) - 1
             self.conf['cfgFromProc']['seqNumber'] = 0
             self.update_output_file()
+
+    def terminate_process(self, signum, frame):
+        self.shutdown_flag = True
+        print('(SIGTERM) terminating the process')
+
+    def received_term_sig(self):
+        return self.shutdown_flag
 
     def packet_handler(self, pkt):
         # me quedo solo con los paquetes con layer 802.11
