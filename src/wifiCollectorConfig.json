@@ -4,6 +4,6 @@
   "outputFileMask" : "file802dot11_",
   "outputExt" : "pcap",
   "tmpOutputExt" : "tmp",
-  "size" : 1000,
+  "size" : 50,
   "seqDig" : 5
 }

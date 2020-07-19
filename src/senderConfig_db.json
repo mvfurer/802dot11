@@ -2,7 +2,7 @@
   "type": "db",
   "host": "localhost",
   "port": 8086,
-  "dbName": "eventsdb",
+  "dbName": "aps",
   "inputDir" : "/home/newheres/datacom/out_recv/",
   "inputFileMask" : "recv802dot11_",
   "outputDir" : "/home/newheres/datacom/out_db/",
