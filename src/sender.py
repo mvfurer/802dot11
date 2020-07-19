@@ -3,32 +3,25 @@
 from scapy.all import *
 import os
 import sys
-import signal
 import argparse
 import time
-
 from senderClass import Sender
 
 programName = "sender"
-global shutdown_flag
-shutdown_flag = 0
-
-
-def terminate_process(signal_number, frame):
-    global shutdown_flag
-    shutdown_flag = 1
-    print('(SIGTERM) terminating the process')
+global wait_time
+wait_time = 5
 
 
 def main():
     process_ready = 0
     if (sys.argv[1] != '-c') | (len(sys.argv) <= 2):
         print("use: " + programName + " -c [CONFIG_FILE]")
-    signal.signal(signal.SIGINT, terminate_process)
+
     print("starting " + programName + " -c " + sys.argv[2] + " with PID: " + str(os.getpid()))
     cfg_file = sys.argv[2]
     sender_inst = Sender(cfg_file)
-    while not shutdown_flag:
+    while not sender_inst.received_term_sig():
+        print("sender recived_term_sig: ", sender_inst.received_term_sig())
         try:
             if process_ready == 0:
                 process_ready = sender_inst.initialize()
@@ -36,14 +29,18 @@ def main():
             sender_inst.send(sender_inst.conf['cfgFromFile']['type'])
             # sender_inst.write_pcap_in_file()
             # sender_inst.update_output_file()
-            print("watting 5 seconds for files")
-            time.sleep(5)
+            print("waiting " + wait_time + " seconds for files")
+            time.sleep(wait_time)
+        except socket.error as ex:
+            print('[' + programName + ']' + " can not connect to server: " + str(ex))
+            time.sleep(wait_time)
         except ConnectionResetError as e1:
-            print('[' + programName + ']' + ' Exception: process exit', e1)
+            print('[' + programName + ']' + ' Exception: process exit', str(e1))
+            time.sleep(wait_time)
             exit()
         except Exception as e2:
-            print('[' + programName + ']' + ' Exception: waitting 5 seconds ..')
-            time.sleep(5)
+            print('[' + programName + ']' + ' Exception: ', str(e2))
+            time.sleep(wait_time)
 
 
 main()
