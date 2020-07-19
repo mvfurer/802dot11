@@ -12,6 +12,7 @@ import sys
 import argparse
 import json
 import glob
+import signal
 import datetime
 import pickle
 import os
@@ -48,9 +49,10 @@ class Receiver(dataUtils):
         self.data_payload = 2 * 1024
         self.class_name = "receiverClass"
         self.pkt = []
+        self.shutdown_flag = False
 
     def initialize(self):
-
+        signal.signal(signal.SIGINT, self.terminate_process)
         with open(self.conf['cfgFromProc']['configFile']) as json_file:
             text = json_file.read()
             json_data = json.loads(text)
@@ -82,12 +84,18 @@ class Receiver(dataUtils):
             print("Waiting to receive message from client")
             self.client, self.address = self.sock.accept()
 
+    def terminate_process(self, signum, frame):
+        self.shutdown_flag = True
+        print('(SIGTERM) terminating the process')
+
+    def received_term_sig(self):
+        return self.shutdown_flag
 
     def start(self):
 
         i = 0
         self.data = []
-        while True:
+        while not self.received_term_sig():
             try:
                 container = self.client.recv(self.data_payload)
                 datarcv = pickle.loads(container)
