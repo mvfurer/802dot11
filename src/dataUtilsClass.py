@@ -7,24 +7,58 @@ import grp
 import os
 
 class dataUtils:
-
+    channel_freq = {
+        "2412": 1,
+        "2417": 2,
+        "2422": 3,
+        "2427": 4,
+        "2432": 5,
+        "2437": 6,
+        "2442": 7,
+        "2447": 8,
+        "2452": 9,
+        "2457": 10,
+        "2462": 11,
+        "2467": 12,
+        "2472": 13,
+        "2484": 14,
+        "5180": 36,
+        "5200": 40,
+        "5220": 44,
+        "5240": 48,
+        "5260": 52,
+        "5280": 56,
+        "5300": 60,
+        "5320": 64,
+        "5745": 149,
+        "5765": 153,
+        "5785": 157,
+        "5805": 161,
+        "5825": 165
+    }
     def __init__(self):
         pass
 
     def open_pcap_file(self, file_name):
-        return rdpcap(file_name)
+        return rdpcap(file_name, 1024)
 
     def get_json_from_radioTap(self, pkt):
         try:
             net_name = pkt[3].info.decode("utf-8")
             tstamp = datetime.datetime.fromtimestamp(pkt[0].time).strftime('%Y-%m-%dT%H:%M:%SZ')
             dBm = pkt[0].dBm_AntSignal
+            mac = pkt[0].addr3
+            freq = pkt[0].Channel
+            channel = self.get_channel_number(freq)
             data = {
                     "measurement": "signal_level",
                     "time": tstamp,
                     "tags": {
-                        "network": net_name,
-                        "dBm": dBm
+                        "ssid": net_name,
+                        "mac": mac,
+                        "rssi": dBm,
+                        "channel": channel,
+                        "frequency": freq
                     },
                     "fields": {
                         "devId": 0
@@ -94,3 +128,16 @@ class dataUtils:
             self.conf['cfgFromProc']['seqNumber'] = num
         else:
             print("ERROR. numero de secuencia invalido")
+
+    def rename_dst_file(self, file):
+        # remove inputFileMask
+        # mystr = "file802dot11_20200708_233149_00623.pcap"
+        # -> mystr.split("file802dot11") -> ['', '_20200708_233149_00623.pcap']
+        file_date = file.split(self.conf['cfgFromFile']['inputFileMask'])[1]
+        return self.conf['cfgFromFile']['outputFileMask'] + file_date
+
+    def get_channel_number(self, freq):
+        sfreq = str(freq)
+        ch = self.channel_freq.get(sfreq)
+        return str(ch)
+
