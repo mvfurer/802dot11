@@ -12,11 +12,12 @@ import argparse
 import json
 import glob
 import datetime
+import signal
 import pickle
 from shutil import copyfile
 from dataUtilsClass import dataUtils
 from influxdb import InfluxDBClient
-
+# import pdb; pdb.set_trace()
 
 class Sender(dataUtils):
 
@@ -54,8 +55,10 @@ class Sender(dataUtils):
         self.class_name = "receiverClass"
         self.BUFFER_SIZE = 1 * 1024
         self.pkt = []
+        self.shutdown_flag = False
 
     def initialize(self):
+        signal.signal(signal.SIGINT, self.terminate_process)
         with open(self.conf['cfgFromProc']['configFile']) as json_file:
             text = json_file.read()
             json_data = json.loads(text)
@@ -78,15 +81,26 @@ class Sender(dataUtils):
                     self.socket.settimeout(3)
                     self.socket.connect(self.server_address)
                 except socket.gaierror as e:
-                    print("Address-related error connecting to server: " + str(e))
+                    print("Address-related gaierror connecting to server: " + str(e))
                     raise e
                 except socket.error as ex:
-                    print("Address-related error connecting to server: " + str(ex))
                     raise ex
             if self.conf['cfgFromFile']['type'] == 'db':
                 print("initialize: sender to db")
-                self.client = InfluxDBClient(self.conf['cfgFromFile']['host'], 8086, 'root', 'root', self.conf['cfgFromFile']['dbName'])
+                # init client
+                # self.client = InfluxDBClient(self.conf['cfgFromFile']['host'], 8086, 'root', 'root', self.conf['cfgFromFile']['dbName'])
+                self.client = InfluxDBClient(self.conf['cfgFromFile']['host'], 8086, 'root', 'root')
+                if {'name': self.conf['cfgFromFile']['dbName']} not in self.client.get_list_database():
+                    self.client.create_database(self.conf['cfgFromFile']['dbName'])
+                self.client.switch_database(self.conf['cfgFromFile']['dbName'])
             return 1
+
+    def terminate_process(self, signum, frame):
+        self.shutdown_flag = True
+        print('(SIGTERM) terminating the process')
+
+    def received_term_sig(self):
+        return self.shutdown_flag
 
     def send_tcp(self):
         print("send_tcp buscando archivos")
@@ -121,10 +135,18 @@ class Sender(dataUtils):
             container['payload'] = b'0'
             self.socket.sendall(pickle.dumps(container))
             data = self.socket.recv(self.BUFFER_SIZE)
-            copyfile(file, self.conf['cfgFromFile']['inputDir'] + file_name)
+            copyfile(file, self.conf['cfgFromFile']['outputDir'] + self.rename_dst_file(file_name))
             # cambio nombre de archivo para que no lo tome en la proxima pasada
             os.rename(file, file + '.ok')
-
+            if self.shutdown_flag:
+                print("no more files to send")
+                print("send 2 to server")
+                container['type'] = 2
+                container['payload'] = b'0'
+                container['name'] = ''
+                self.socket.sendall(pickle.dumps(container))
+                data = self.socket.recv(self.BUFFER_SIZE)
+                raise Exception('shutdown')
         print("no more files to send")
         print("send 2 to server")
         container['type'] = 2
@@ -134,7 +156,7 @@ class Sender(dataUtils):
         data = self.socket.recv(self.BUFFER_SIZE)
 
     def send_db(self):
-        print("send_db buscando archivos")
+        print("[send_db] searching files in: " + self.conf['cfgFromFile']['inputDir'])
         file_list = glob.glob(self.conf['cfgFromFile']['inputDir'] +
                                               self.conf['cfgFromFile']['inputFileMask'] +
                                               "*." + self.conf['cfgFromFile']['outputExt'])
@@ -143,15 +165,18 @@ class Sender(dataUtils):
             i = 0
             # Muestro archivo de entrada completo
             self.conf['cfgFromProc']['send_file_name'] = file
-            print(file)
+            print("openning" + file)
             f = self.open_pcap_file(file)
+            print("opened" + file)
             for reg in f:
+                print("register: " + str(i) + " file: "+ file)
                 data = self.get_json_from_radioTap(reg)
                 if len(data) > 2:
                     print("[Sender] ", data)
                     json_body = [data]
-                    print(type(json_body))
+                    #print(type(json_body))
                     self.client.write_points(json_body)
+                i = i + 1
             os.rename(file, file + '.ok')
             self.set_sequence_number(self.get_next_sequence_number())
 
@@ -163,6 +188,7 @@ class Sender(dataUtils):
                               "*." + self.conf['cfgFromFile']['outputExt'])
         print(file_list)
         for file_name in file_list:
+            print("")
             print("src: " + file_name)
             f = rdpcap(file_name)
             s = f.sessions()
@@ -172,8 +198,14 @@ class Sender(dataUtils):
                     # print("lee registro numero: " + str(i))
                     # print(packet.show())
             print("registers number: " + str(i))
+            i = 0
             file = os.path.basename(file_name)
-            print("dst: " + self.conf['cfgFromFile']['outputDir'] + file)
+            print("dst: " + self.conf['cfgFromFile']['outputDir']  + self.rename_dst_file(file))
+            copyfile(file_name, self.conf['cfgFromFile']['outputDir'] + self.rename_dst_file(file))
+            copyfile(file_name, file_name + '.ok')
+            if self.shutdown_flag:
+                raise Exception('shutdown')
+
 
     def send(self, method):
         print("method: " + method)
