@@ -29,7 +29,7 @@ def main():
             sender_inst.send(sender_inst.conf['cfgFromFile']['type'])
             # sender_inst.write_pcap_in_file()
             # sender_inst.update_output_file()
-            print("waiting " + wait_time + " seconds for files")
+            print("waiting " + str(wait_time) + " seconds for files")
             time.sleep(wait_time)
         except socket.error as ex:
             print('[' + programName + ']' + " can not connect to server: " + str(ex))
