@@ -36,6 +36,8 @@ else
     echo "receiver server process is already running with pid: $my_pid"
 fi
 
+# sleep 5
+
 # run sender to server
 my_proc=`ps aux | grep -E "python sender.py -c senderConfig.json" | grep -v grep`
 my_pid=`echo $my_proc | awk '{print $2}'`
@@ -46,6 +48,8 @@ then
 else
     echo "sender client process is already running with pid: $my_pid"
 fi
+
+sleep 5
 
 # run wifi collector
 my_proc=`ps aux | grep -E "sudo python wifiCollector.py -c wifiCollectorConfig.json" | grep -v grep`
