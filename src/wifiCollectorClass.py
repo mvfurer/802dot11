@@ -5,15 +5,19 @@ from scapy.all import *
 import json
 import signal
 import datetime
-import pdb; pdb.set_trace()
+# import pdb
 from dataUtilsClass import dataUtils
+import logging
+
+networkInfo = {}
+
 
 class wifiCollector(dataUtils):
-
     def __init__(self, conf_file):
         self.conf = {
                 'cfgFromFile': {
                     'interface': '',
+                    'logFile': '',
                     'outputDir': '',
                     'outputFileMask': '',
                     'outputExt': '',
@@ -43,19 +47,49 @@ class wifiCollector(dataUtils):
         except (PermissionError, OSError) as e1:
             print('[' + self.class_name + ']' + ' Exception: ', e1)
             raise Exception("Error when try to pull data wifi")
-        print("writing file: " + self.conf['cfgFromProc']['finalOutputFile'])
-        self.write_dot11_in_pcap()
+        if len(self.pkt) > 0:
+            logging.info('writing records: ' + str(len(self.pkt)))
+            logging.info('writing file: ' + self.conf['cfgFromProc']['finalOutputFile'])
+            self.write_dot11_in_pcap()
+            self.update_output_file()
+        else:
+            logging.info('writing records: 0')
         self.pkt = []
-        self.update_output_file()
+
+    def print_networks(self):
+        net = {}
+        # sorted_by_rssi = []
+        for sorted_key in sorted(networkInfo, key=lambda key: networkInfo[key]['rssi'], reverse=True):
+            net = networkInfo[sorted_key]
+            print('{:30} {:20} {:5} {:4} {:4}'.format(net['ssid'], net['mac'],
+                                                      net['rssi'], net['channel'], net['frequency']))
 
     def scan(self):
         try:
-            sniff(count=1, iface=self.conf['cfgFromFile']['interface'],
-                  prn=self.packet_handler)
+            sniff(count=5, iface=self.conf['cfgFromFile']['interface'],
+                  prn=self.packet_handler_uniq)
         except (PermissionError, OSError) as e1:
             print('[' + self.class_name + ']' + ' Exception: ', e1)
             raise Exception("Error when try to pull data wifi")
-        print(self.pkt)
+        if len(self.pkt) == 1:
+            data = self.get_json_from_radioTap(self.pkt)
+            # print(data)
+            # print("\n")
+            networkInfo[data['tags']['ssid']] = data['tags'] # key: ssid and value json of tags
+            json_object = json.loads(json.dumps(networkInfo))
+            json_formatted_str = json.dumps(json_object, indent=2)
+            # print(json_formatted_str)
+            #self.print_networks()
+            print('networks discovered: ', len(networkInfo))
+        if len(self.pkt) > 1:
+            for elem in self.pkt:
+                data = self.get_json_from_radioTap(list(elem))
+                networkInfo[data['tags']['ssid']] = data['tags']  # key: ssid and value json of tags
+                myValues = data['tags']
+                json_object = json.loads(json.dumps(networkInfo))
+                json_formatted_str = json.dumps(json_object, indent=2)
+                # print('networks discovered: ', len(networkInfo))
+                # print('{:30} {:20}'.format(myValues['ssid'], myValues['mac']))
         self.pkt = []
 
     def initialize(self):
@@ -75,10 +109,14 @@ class wifiCollector(dataUtils):
             self.conf['cfgFromProc']['maxSeqNumber'] = 10 ** int(number_of_digits) - 1
             self.conf['cfgFromProc']['seqNumber'] = 0
             self.update_output_file()
+        logging.basicConfig(filename=self.conf['cfgFromFile']['logFile'],
+                            filemode='a',
+                            format='%(asctime)s - %(process)d - %(levelname)s - %(message)s',
+                            level=logging.DEBUG)
 
     def terminate_process(self, signum, frame):
         self.shutdown_flag = True
-        print('(SIGTERM) terminating the process')
+        logging.info('(SIGTERM) terminating the process')
 
     def received_term_sig(self):
         return self.shutdown_flag
@@ -91,3 +129,10 @@ class wifiCollector(dataUtils):
         if pkt.haslayer(Dot11Beacon):
             self.pkt.append(pkt)
 
+    def packet_handler_uniq(self, pkt):
+        # me quedo solo con los paquetes con layer 802.11
+        # no funciona Dot11
+        # https://github.com/secdev/scapy/issues/1590
+        # utilizo beacon porque son los que me interesan para ver las redes
+        if pkt.haslayer(Dot11Beacon):
+            self.pkt.append(pkt)
