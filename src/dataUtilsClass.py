@@ -44,7 +44,7 @@ class dataUtils:
 
     def get_json_from_radioTap(self, pkt):
         try:
-            net_name = pkt[3].info.decode("utf-8")
+            net_name = pkt[0].info.decode("utf-8")
             tstamp = datetime.datetime.fromtimestamp(pkt[0].time).strftime('%Y-%m-%dT%H:%M:%SZ')
             dBm = pkt[0].dBm_AntSignal
             mac = pkt[0].addr3
@@ -56,12 +56,12 @@ class dataUtils:
                     "tags": {
                         "ssid": net_name,
                         "mac": mac,
-                        "rssi": dBm,
                         "channel": channel,
                         "frequency": freq
                     },
                     "fields": {
-                        "devId": 0
+                        "devId": 0,
+                        "rssi": dBm
                     }
                 }
 
