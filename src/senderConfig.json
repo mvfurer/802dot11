@@ -3,6 +3,7 @@
   "host": "localhost",
   "port": 7000,
   "dbName": "",
+  "logFile": "/home/newheres/datacom/sender.log",
   "inputDir" : "/home/newheres/datacom/out/",
   "inputFileMask" : "file802dot11_",
   "outputDir" : "/home/newheres/datacom/out_send/",

@@ -1,6 +1,7 @@
 {
   "host": "localhost",
   "src_port": 7000,
+  "logFile": "/home/newheres/datacom/receiver.log",
   "outputDir" : "/home/newheres/datacom/out_recv/",
   "outputFileMask" : "recv802dot11_",
   "tmpOutputExt" : "tmp",
