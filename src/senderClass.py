@@ -8,7 +8,6 @@ basado en el programa
 from scapy.all import *
 import socket
 import sys
-import argparse
 import json
 import glob
 import datetime
@@ -17,7 +16,9 @@ import pickle
 from shutil import copyfile
 from dataUtilsClass import dataUtils
 from influxdb import InfluxDBClient
-# import pdb; pdb.set_trace()
+import logging
+# import pdb
+
 
 class Sender(dataUtils):
 
@@ -28,6 +29,7 @@ class Sender(dataUtils):
                 'host': '',
                 'port': 5000,
                 'dbName': '',
+                'logFile': '',
                 'inputDir': '',
                 'inputFileMask': '',
                 'outputDir': '',
@@ -58,6 +60,7 @@ class Sender(dataUtils):
         self.shutdown_flag = False
 
     def initialize(self):
+        TIMEOUT = 3
         signal.signal(signal.SIGINT, self.terminate_process)
         with open(self.conf['cfgFromProc']['configFile']) as json_file:
             text = json_file.read()
@@ -74,50 +77,66 @@ class Sender(dataUtils):
             self.conf['cfgFromProc']['maxSeqNumber'] = 10 ** int(number_of_digits) - 1
             self.conf['cfgFromProc']['seqNumber'] = 0
             self.update_output_file()
+            logging.basicConfig(filename=self.conf['cfgFromFile']['logFile'],
+                                filemode='a',
+                                format='%(asctime)s - %(process)d - %(levelname)s - %(message)s',
+                                level=logging.DEBUG)
             if self.conf['cfgFromFile']['type'] == 'tcp':
+                logging.info('connecting to: ' + self.conf['cfgFromFile']['host'] +
+                             ':' + str(self.conf['cfgFromFile']['port']) +
+                             ' timeout: ' + str(TIMEOUT))
                 self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.server_address = (self.conf['cfgFromFile']['host'], self.conf['cfgFromFile']['port'])
                 try:
-                    self.socket.settimeout(3)
+                    self.socket.settimeout(TIMEOUT)
                     self.socket.connect(self.server_address)
+                    logging.debug('connection success')
                 except socket.gaierror as e:
-                    print("Address-related gaierror connecting to server: " + str(e))
+                    logging.error('error connecting to: ' +
+                                  self.conf['cfgFromFile']['host'] +
+                                  ':' + str(self.conf['cfgFromFile']['port']) +
+                                  ' timeout: ' + str(TIMEOUT) + ' - exception: ' + str(e))
                     raise e
                 except socket.error as ex:
+                    logging.error('socket error, connecting to: ' +
+                                  self.conf['cfgFromFile']['host'] +
+                                  ':' + str(self.conf['cfgFromFile']['port']) +
+                                  ' timeout: ' + str(TIMEOUT) + ' - exception: ' + str(ex))
                     raise ex
             if self.conf['cfgFromFile']['type'] == 'db':
-                print("initialize: sender to db")
+                logging.info('connecting to influxdb')
                 # init client
                 # self.client = InfluxDBClient(self.conf['cfgFromFile']['host'], 8086, 'root', 'root', self.conf['cfgFromFile']['dbName'])
                 self.client = InfluxDBClient(self.conf['cfgFromFile']['host'], 8086, 'root', 'root')
                 if {'name': self.conf['cfgFromFile']['dbName']} not in self.client.get_list_database():
+                    logging.info('db does not exist, creating ...')
                     self.client.create_database(self.conf['cfgFromFile']['dbName'])
                 self.client.switch_database(self.conf['cfgFromFile']['dbName'])
             return 1
 
     def terminate_process(self, signum, frame):
         self.shutdown_flag = True
-        print('(SIGTERM) terminating the process')
+        logging.info('(SIGTERM) terminating the process')
 
     def received_term_sig(self):
         return self.shutdown_flag
 
     def send_tcp(self):
-        print("send_tcp buscando archivos")
+        logging.debug('sending records to remote host ...')
 
         file_list = glob.glob(self.conf['cfgFromFile']['inputDir'] +
-                                              self.conf['cfgFromFile']['inputFileMask'] +
-                                              "*." + self.conf['cfgFromFile']['outputExt'])
+                              self.conf['cfgFromFile']['inputFileMask'] +
+                              "*." + self.conf['cfgFromFile']['outputExt'])
         container = {}
         for file in file_list:
+            logging.debug('opening file: ' + file)
             i = 0
             # Muestro archivo de entrada completo
             self.conf['cfgFromProc']['send_file_name'] = file
-            print(file)
             # extraigo el directorio y me quedo solo con el nombre de archivo
             file_name = os.path.basename(file)
             # creo el container
-            container={'type': 0, 'name': file, 'payload': b'0'}
+            container = {'type': 0, 'name': file, 'payload': b'0'}
             # open file and send it
             data = ''
             with open(file, 'rb') as f:
@@ -130,53 +149,62 @@ class Sender(dataUtils):
                     i = i + 1
                     data_send = f.read(self.BUFFER_SIZE)
             # it was last register. send 1 to notify
-            print("sent all registers: " + str(i))
+            logging.debug('total number of records sent: ' + str(i))
             container['type'] = 1
             container['payload'] = b'0'
             self.socket.sendall(pickle.dumps(container))
             data = self.socket.recv(self.BUFFER_SIZE)
             copyfile(file, self.conf['cfgFromFile']['outputDir'] + self.rename_dst_file(file_name))
             # cambio nombre de archivo para que no lo tome en la proxima pasada
+            logging.debug('rename file from: ' + file + ' to: ' + file + '.ok')
             os.rename(file, file + '.ok')
             if self.shutdown_flag:
-                print("no more files to send")
-                print("send 2 to server")
+                logging.debug('shutting down ...')
+                logging.debug('no more files to send')
+                logging.debug('send message NO_MORE_FILE to server')
                 container['type'] = 2
                 container['payload'] = b'0'
                 container['name'] = ''
-                self.socket.sendall(pickle.dumps(container))
-                data = self.socket.recv(self.BUFFER_SIZE)
-                raise Exception('shutdown')
-        print("no more files to send")
-        print("send 2 to server")
+                try:
+                    self.socket.sendall(pickle.dumps(container))
+                    data = self.socket.recv(self.BUFFER_SIZE)
+                    # raise Exception('shutdown')
+                except Exception as e:
+                    logging.debug('send_tcp - Exception: ' + str(e))
+        logging.debug('no more files to send')
+        logging.debug('send message NO_MORE_FILE to server')
         container['type'] = 2
         container['payload'] = b'0'
         container['name'] = ''
-        self.socket.sendall(pickle.dumps(container))
-        data = self.socket.recv(self.BUFFER_SIZE)
+        try:
+            self.socket.sendall(pickle.dumps(container))
+            data = self.socket.recv(self.BUFFER_SIZE)
+        except Exception as e:
+            logging.debug('send_tcp - Exception: ' + str(e))
 
     def send_db(self):
-        print("[send_db] searching files in: " + self.conf['cfgFromFile']['inputDir'])
+        logging.debug("[send_db] searching files in: " + self.conf['cfgFromFile']['inputDir'])
         file_list = glob.glob(self.conf['cfgFromFile']['inputDir'] +
-                                              self.conf['cfgFromFile']['inputFileMask'] +
-                                              "*." + self.conf['cfgFromFile']['outputExt'])
-        
+                              self.conf['cfgFromFile']['inputFileMask'] +
+                              "*." + self.conf['cfgFromFile']['outputExt'])
+
         for file in file_list:
             i = 0
             # Muestro archivo de entrada completo
             self.conf['cfgFromProc']['send_file_name'] = file
-            print("openning" + file)
+            logging.debug("openning: " + file)
             f = self.open_pcap_file(file)
-            print("opened" + file)
+            print("opened success: " + file)
             for reg in f:
-                print("register: " + str(i) + " file: "+ file)
+                logging.debug("record: " + str(i) + " file: " + file)
                 data = self.get_json_from_radioTap(reg)
                 if len(data) > 2:
-                    print("[Sender] ", data)
+                    logging.debug('writting recod in db:  ' + str(data))
                     json_body = [data]
-                    #print(type(json_body))
+                    # print(type(json_body))
                     self.client.write_points(json_body)
                 i = i + 1
+            logging.debug('rename file from: ' + file + ' to: ' + file + '.ok')
             os.rename(file, file + '.ok')
             self.set_sequence_number(self.get_next_sequence_number())
 
@@ -200,12 +228,11 @@ class Sender(dataUtils):
             print("registers number: " + str(i))
             i = 0
             file = os.path.basename(file_name)
-            print("dst: " + self.conf['cfgFromFile']['outputDir']  + self.rename_dst_file(file))
+            print("dst: " + self.conf['cfgFromFile']['outputDir'] + self.rename_dst_file(file))
             copyfile(file_name, self.conf['cfgFromFile']['outputDir'] + self.rename_dst_file(file))
             copyfile(file_name, file_name + '.ok')
             if self.shutdown_flag:
                 raise Exception('shutdown')
-
 
     def send(self, method):
         print("method: " + method)
