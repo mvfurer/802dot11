@@ -113,13 +113,14 @@ def mean():
                 'time > \'' + min_time.strftime("%Y-%m-%dT%H:%M:%SZ") + '\' and ' + \
                 'time <  \'' + max_time.strftime("%Y-%m-%dT%H:%M:%SZ") + '\' ' + \
                 'group by ssid ORDER BY time desc limit 1'
-        result = client.query(query)
+        print(query)
+        result = client.query(query, params={'precision': 's'})
         SSID = 1
         for idx, rec in enumerate(result):
             # second element of tuple: ('signal_level', {'ssid': 'myname'})
             newkey = '{:30s}'.format(result.keys()[idx][SSID]['ssid'])
-            info_net = '{:40s}'.format(rec[0]['time'])
-            info_net += '{:20s}'.format(str(rec[0]['mean']))
+            info_net = '{:25s}'.format(rec[0]['time'].split('.')[0] + 'Z')
+            info_net += '{:10s}'.format(str(round(rec[0]['mean'], 2)))
             info_net += '{:14s}'.format(str(rec[0]['count']))
             nets[newkey] = info_net
         return jsonify(nets)
