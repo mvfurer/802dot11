@@ -33,7 +33,8 @@ ResultSet({'('signal_level', {'ssid': 'myname'})': [{'time': '2020-08-23T19:16:5
    'frequency': '2462', 'mac': 'ff:00:99:4b:c3:77', 'rssi': '-83'}], ..... }]})
 '''
 
-@app.route("/networks", methods=['POST'])
+
+@app.route("/networks", methods=['GET'])
 def networks():
     app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
     client = InfluxDBClient('localhost', 8086, 'root', 'root', 'nets')
@@ -51,6 +52,7 @@ def networks():
         info_net += '{:6s}'.format(rec[0]['frequency'])
         nets[newkey] = info_net
     return jsonify(nets)
+
 
 @app.route('/stats', methods=['POST'])
 def stats():
@@ -114,7 +116,7 @@ def mean():
                 'time <  \'' + max_time.strftime("%Y-%m-%dT%H:%M:%SZ") + '\' ' + \
                 'group by ssid ORDER BY time desc limit 1'
         print(query)
-        result = client.query(query, params={'precision': 's'})
+        result = client.query(query)
         SSID = 1
         for idx, rec in enumerate(result):
             # second element of tuple: ('signal_level', {'ssid': 'myname'})
@@ -126,10 +128,30 @@ def mean():
         return jsonify(nets)
 
 
-
-@app.route("/hello")
-def hello():
-    return jsonify("hello")
+@app.route('/history', methods=['POST'])
+def history():
+    if request.method == 'POST':
+        data = request.get_json()
+        nets = {}
+        client = InfluxDBClient('localhost', 8086, 'root', 'root', 'nets')
+        if (data is None) or ('range' not in data.keys()) or ('ssid' not in data.keys()):
+            return jsonify(nets)
+        max_time = dt.now()
+        min_time = dt.now() - timedelta(minutes=data['range'])
+        filter_ssid = data['ssid']
+        query = 'select rssi, channel from signal_level where ssid = \'' + filter_ssid + '\'' +\
+                ' and time > \'' + min_time.strftime("%Y-%m-%dT%H:%M:%SZ") + '\' and ' + \
+                'time <  \'' + max_time.strftime("%Y-%m-%dT%H:%M:%SZ") + '\' ' + \
+                'group by ssid ORDER BY time desc'
+        print(query)
+        result = client.query(query)
+        for rec in result.get_points():
+            # second element of tuple: ('signal_level', {'ssid': 'myname'})
+            newkey = '{:25s}'.format(rec['time'])
+            info_net = '{:10s}'.format(str(rec['rssi']))
+            info_net += '{:4s}'.format(rec['channel'])
+            nets[newkey] = info_net
+        return jsonify(nets)
 
 
 if __name__ == '__main__':
