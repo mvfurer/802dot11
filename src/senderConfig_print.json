@@ -1,0 +1,13 @@
+{
+  "type": "print",
+  "host": "localhost",
+  "port": 7000,
+  "dbName": "",
+  "inputDir" : "/home/newheres/datacom/out/",
+  "inputFileMask" : "file802dot11_",
+  "outputDir" : "/home/newheres/datacom/out_send/",
+  "outputFileMask" : "send802dot11_",
+  "outputExt" : "pcap",
+  "size" : 1000,
+  "seqDig" : 5
+}
