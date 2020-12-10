@@ -1,3 +1,7 @@
+"""
+Esta clase se utiliza en casi todos los procesos, contiene methodos y atributos
+para trabajar con pcap files, canales de IEEE 802.11
+"""
 from scapy.all import *
 import json
 import datetime

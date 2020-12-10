@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Inicia todos los procesos
 
 #checking monitor interface
 myInterface=`iw dev | grep mon0 | awk '{print $2}'`

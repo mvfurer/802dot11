@@ -1,3 +1,6 @@
+"""
+Este script es una tool para implementar rapidamente APIs usando flask
+"""
 import json
 from influxdb import InfluxDBClient
 from flask import Flask

@@ -1,3 +1,6 @@
+"""
+Este script es una tool para trabajar con influxdb
+"""
 import json
 from influxdb import InfluxDBClient
 from datetime import datetime as dt

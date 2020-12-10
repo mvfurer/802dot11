@@ -1,3 +1,6 @@
+"""
+Implementa las APIs de consulta de base de datos
+"""
 import json
 from influxdb import InfluxDBClient
 from flask import Flask

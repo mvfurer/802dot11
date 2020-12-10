@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# verifica el PID de los procesos
 
 my_proc=`ps aux | grep -E "python sender.py -c senderConfig_db.json" | grep -v grep`
 my_pid=`echo $my_proc | awk '{print $2}'`
