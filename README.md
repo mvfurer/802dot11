@@ -1,8 +1,6 @@
 # 802dot11
 
-Este proyecto fue creado para aprobar la materia "Comunicacion de datos" de la Maestria en Telecomunicaciones de la Universidad Nacional de Cordoba.
-
-
-Se toman paquetes del protocolo 802.11 de utilizando una raspBerry Pi con una adaptador wifi usb. Esos paquetes son enviados a una PC mediante una conexion TCP utilizando sockets. Los paquetes son reenpaquetados y desempaquetados en la PC.
-Luego de ser guardados en archivos se extrae la informacion correspondiente a nombre de red, intesidad de señal, ID de la RaspBerry y timestamp. Esta informacion es insertada en una base de datos InfluxDB.
-Para la consulta web de los datos se utiliza un servidor Flask con un script que consulta a la DB y reporta el ultimo estado conocido de la red con su intensidad en dB.
+Este repositorio fue creado como proyecto final para aprobar la materia "Comunicacion de datos" de la Maestria en Telecomunicaciones de la Universidad Nacional de Cordoba.
+En esta prueba de concepto desarrollamos un sistema de software para el monitoreo remoto de Access Points (APs) de redes inalámbricas de área local (WLANs) IEEE 802.11, con el que se colectan parámetros básicos de capa física (PHY) como también de la capa de acceso al medio (MAC).
+El sistema consta de un dispositivo raspberry pi en modo monitor que guarda en archivos pcap los Beacon Frames (BFs) transmitidos por los APs,  estos BFs son enviados mediante una comunicación por socket a un servidor remoto, e insertados en una base de datos. A través de un servicio web es posible la visualización del identificador del servicio de red (SSID), intensidad de la señal recibida (RSSI), dirección física (MAC address), marca temporal (timestamp), y canal (channel) recibidos, además la información visualizada puede ser en valores instantáneos o históricos.
+Las mediciones fueron realizadas de manera Indoor en ambiente no controlado.
