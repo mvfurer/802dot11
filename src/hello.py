@@ -4,6 +4,9 @@ from flask import Flask
 from flask import jsonify
 from flask import request
 # import pdb; pdb.set_trace()
+'''
+Este es solo un archivo que sirve para debugging
+'''
 app = Flask(__name__)
 '''
 data points:

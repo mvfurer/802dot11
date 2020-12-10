@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 
-#Este script debe ser ejecutado con usuario root
-#verifico si existe la interface mon0 que usa collector
+# Este script debe ser ejecutado con usuario root
+# verifico si existe la interface mon0 que usa collector
+# y crea la interface en modo monitor (modo promiscuo)
+
 iw dev
 devWifi=`iw dev | grep ^phy# | awk '{print $1}'`
 echo "Se encontraron los siguientes dispositivos de hardware: "

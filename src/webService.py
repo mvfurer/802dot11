@@ -1,3 +1,8 @@
+"""
+En este file se implementan las APIs del webservice
+"""
+
+
 import json
 from influxdb import InfluxDBClient
 from flask import Flask
@@ -32,30 +37,13 @@ ResultSet({'('signal_level', {'ssid': 'myname'})': [{'time': '2020-08-23T19:16:5
   '('signal_level', {'ssid': 'yourName 2.4GHz'})': [{'time': '2020-08-23T19:12:56Z', 'channel': '11', 'devId': 0,
    'frequency': '2462', 'mac': 'ff:00:99:4b:c3:77', 'rssi': '-83'}], ..... }]})
 '''
+'''
+all networks in the data  base
+'''
 
 
 @app.route("/networks", methods=['GET'])
 def networks():
-    app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
-    client = InfluxDBClient('localhost', 8086, 'root', 'root', 'nets')
-    query = 'select * from signal_level group by ssid ORDER BY time desc limit 1'
-    result = client.query(query)
-    nets = {}
-    SSID = 1
-    for idx, rec in enumerate(result):
-        # second element of tuple: ('signal_level', {'ssid': 'myname'})
-        newkey = '{:40s}'.format(result.keys()[idx][SSID]['ssid'])
-        info_net = '{:22s}'.format(rec[0]['time'])
-        info_net += '{:5s}'.format(str(rec[0]['rssi']))
-        info_net += '{:19s}'.format(rec[0]['mac'])
-        info_net += '{:4s}'.format(rec[0]['channel'])
-        info_net += '{:6s}'.format(rec[0]['frequency'])
-        nets[newkey] = info_net
-    return jsonify(nets)
-
-
-@app.route('/stats', methods=['POST'])
-def stats():
     app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
     client = InfluxDBClient('localhost', 8086, 'root', 'root', 'nets')
     query = 'select * from signal_level group by ssid ORDER BY time desc limit 1'
@@ -81,11 +69,12 @@ def last():
         data = request.get_json()
         nets = {}
         if (data is None) or ('range' not in data.keys()):
-            return jsonify(nets)
+            data['range'] = 5
         client = InfluxDBClient('localhost', 8086, 'root', 'root', 'nets')
-        last_time = dt.now() - timedelta(minutes=data['range'])
-        query = 'select * from signal_level where time > \'' + \
-                last_time.strftime("%Y-%m-%dT%H:%M:%SZ") + '\' group by ssid ORDER BY time desc limit 1'
+        min_time = dt.now() - timedelta(minutes=data['range'])
+        query = 'select * from signal_level where ' + \
+                'time > \'' + min_time.strftime("%Y-%m-%dT%H:%M:%SZ") + '\'  ' + \
+                'group by ssid ORDER BY time desc limit 1'
         result = client.query(query)
 
         SSID = 1

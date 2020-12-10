@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# this script starts all the processes
 
 #checking monitor interface
 myInterface=`iw dev | grep mon0 | awk '{print $2}'`
@@ -61,11 +62,3 @@ then
 else
     echo "wifiCollector process is already running with pid: $my_pid"
 fi
-
-# run sender second process in the batch chain
-
-
-
-
-
-

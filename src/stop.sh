@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# this script stops all the processes
 
 #stop sender db
 my_proc=`ps aux | grep -E "python sender.py -c senderConfig_db.json" | grep -v grep`
